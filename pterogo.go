@@ -3,6 +3,7 @@ package pterogo
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -34,11 +35,12 @@ type Server struct {
 // Taken from the Pterodactyl API page. This will return an error if it fails at any point
 // Otherwise, it will return a map of unique servers , based off their identifier
 // A Bearer Auth token is required
-func listServers(auth_token string) (map[string]Server, error) {
+func listServers(auth_token string, url string) (map[string]Server, error) {
 	client := &http.Client{}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//Build GET Request
-	req, err := http.NewRequest("GET", "https://panel.12egc.com/api/client", nil)
+	route := fmt.Sprintf("%s/api/client", url)
+	req, err := http.NewRequest("GET", route, nil)
 	if err != nil {
 		slog.Error("Failed to make a new request", "Error", err)
 		return nil, err
