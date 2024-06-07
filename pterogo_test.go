@@ -67,10 +67,13 @@ func TestListServersBadAuth_neg(t *testing.T) {
 func TestServerDetails(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	err := godotenv.Load()
+	auth_token := os.Getenv("PTERO_API_KEY")
+	base_url := os.Getenv("BASE_URL")
 	logger.Info("TestServerDetails()")
 	if err != nil {
 		log.Fatalf(`No env file found`)
 	}
 
 	// Get detail about the server passed
+
 }
