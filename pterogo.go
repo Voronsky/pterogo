@@ -9,20 +9,27 @@ import (
 	"os"
 )
 
+// Collection of methods that pertain to the Pterodactyl Client API
+type ClientAPI interface {
+	ListServers() (map[string]Server, error)
+	ServerDetails() (Server, error)
+}
+type PterodactylClient struct{}
+
 type PteroResp struct {
-	Object string      `json:"object, omitempty"`
-	Data   []PteroData `json:"data, omitempty"`
+	Object string      `json:"object"`
+	Data   []PteroData `json:"data"`
 }
 
 type PteroData struct {
-	Object     string     `json:"object, omitempty"`
-	Attributes Attributes `json:"attributes, omitempty"`
+	Object     string     `json:"object"`
+	Attributes Attributes `json:"attributes"`
 }
 
 type Attributes struct {
-	Name        string `json:"name, omitempty"`
-	Identifier  string `json:"identifier, omitempty"`
-	Description string `json:"description, omitempty"`
+	Name        string `json:"name"`
+	Identifier  string `json:"identifier"`
+	Description string `json:"description"`
 }
 
 type Server struct {
@@ -34,7 +41,7 @@ type Server struct {
 // Taken from the Pterodactyl API page. This will return an error if it fails at any point
 // Otherwise, it will return a map of unique servers , based off their identifier
 // A Bearer Auth token is required
-func listServers(auth_token string, url string) (map[string]Server, error) {
+func (pc PterodactylClient) ListServers(auth_token string, url string) (map[string]Server, error) {
 	client := &http.Client{}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//Build GET Request
@@ -77,7 +84,7 @@ func listServers(auth_token string, url string) (map[string]Server, error) {
 		return nil, err
 	}
 
-	logger.Info("Request successful", "Resp", resp)
+	logger.Info("Request successful", "Resp", resp.StatusCode)
 
 	servers := map[string]Server{}
 	r := PteroResp{}
@@ -103,7 +110,7 @@ func listServers(auth_token string, url string) (map[string]Server, error) {
 	return servers, nil
 }
 
-func ServerDetails(identifier string, auth_token string, url string) (*Server, error) {
+func (pc PterodactylClient) ServerDetails(identifier string, auth_token string, url string) (*Server, error) {
 	client := &http.Client{}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//Build GET Request
@@ -149,7 +156,7 @@ func ServerDetails(identifier string, auth_token string, url string) (*Server, e
 		return nil, err
 	}
 
-	logger.Info("Request successful", "Resp", resp)
+	logger.Info("Request successful", "Resp", resp.Status)
 
 	defer resp.Body.Close()
 
