@@ -37,9 +37,10 @@ type PteroData struct {
 
 // Attributes holds the attributes of the Pterodactly Object found in the Data JSON object
 type Attributes struct {
-	Name        string `json:"name"`
-	Identifier  string `json:"identifier"`
-	Description string `json:"description"`
+	Name         string `json:"name,omitempty"`
+	Identifier   string `json:"identifier,omitempty"`
+	Description  string `json:"description,omitempty"`
+	CurrentState string `json:"current_state,omitempty"`
 }
 
 // Holds necessary information about a server
@@ -221,6 +222,28 @@ func (pc PterodactylClient) ServerDetails(identifier string) (*Server, error) {
 	return server, nil
 }
 
+// Retrieves the a string of power state based on the server or "identifier"
+func (pc PterodactylClient) GetPowerState(identifier string) (string, error) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	pData := &PteroData{}
+
+	//Build GET route and make the request
+	route := fmt.Sprintf("%s/api/client/servers/%s/resources", pc.Request.url, identifier)
+
+	resp, err := pc.Request.PteroGetRequest(route)
+	if err != nil {
+		logger.Error("Error received making request to Pterodactyl", "Error", err)
+		return "", err
+	}
+
+	json.Unmarshal(resp, &pData)
+	logger.Info("Decoded JSON body", "PteroResp", pData)
+
+	return pData.Attributes.CurrentState, nil
+
+}
+
+// Returns 0 for success or -1 for failure. Pterodactyl does not provide additional information besides a status code for success
 func (pc PterodactylClient) ChangePowerState(identifier string, state string) (int, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
