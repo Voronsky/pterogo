@@ -133,11 +133,49 @@ func TestChangePowerState(t *testing.T) {
 		Request: PteroRequestHeaders{bearer_auth_token, base_url},
 	}
 
-	success, err := client.ChangePowerState("102248be", "restart")
+	success, err := client.ChangePowerState("102248be", "start")
 	if err != nil {
 		log.Fatalf("Error trying to change power state")
 	}
 
+	if success != 0 {
+		logger.Error("Error in trying to change the power state of the server", "SuccessCode", success)
+		log.Fatalf("Error in trying to change the power state of the server")
+	}
+
 	logger.Info("Change State succeeded", "SuccessCode", success)
 	logger.Info("TestChangePowerState() complete")
+}
+
+func TestGetPowerState(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger.Info("== TestGetPowerState() begin ==")
+	identifier := "102248be"
+
+	// Parse env file
+	err := godotenv.Load()
+	bearer_auth_token := os.Getenv("PTERO_API_KEY")
+	base_url := os.Getenv("BASE_URL")
+
+	if err != nil {
+		log.Fatalf(`No env file found`)
+	}
+
+	client := PterodactylClient{
+		Request: PteroRequestHeaders{bearer_auth_token, base_url},
+	}
+
+	logger.Info("Getting power state for server", "Identifier", identifier)
+	state, err := client.GetPowerState(identifier)
+	if err != nil {
+		log.Fatalf("Error trying to get power state")
+	}
+
+	if state == "" {
+		logger.Error("State unable to be retrieved", "State", state)
+		log.Fatalf("State was empty string, expected non-empty string")
+	}
+
+	logger.Info("Succeeded retrieving power state", "PowerState", state)
+	logger.Info("== TestGetPowerState() complete ==")
 }
