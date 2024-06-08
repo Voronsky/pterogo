@@ -102,7 +102,11 @@ func TestServerDetails(t *testing.T) {
 
 	s, err := client.ServerDetails("102248be")
 	if err != nil {
-		log.Fatalf(`Error retrieving server details`)
+		log.Fatalf(`Error retrieving server details, wanted non-nil error`)
+	}
+
+	if s.Name == "" && s.Description == "" {
+		log.Fatalf(`Pterodactly Response returned an empty response, wanted server name and desc`)
 	}
 
 	// Get detail about the server passed
@@ -110,4 +114,30 @@ func TestServerDetails(t *testing.T) {
 	logger.Info("Server info received", "Server Info", s)
 	logger.Info("TestServerDetails() complete")
 
+}
+
+func TestChangePowerState(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger.Info("TestChangePowerState() begin")
+
+	// Parse env file
+	err := godotenv.Load()
+	bearer_auth_token := os.Getenv("PTERO_API_KEY")
+	base_url := os.Getenv("BASE_URL")
+
+	if err != nil {
+		log.Fatalf(`No env file found`)
+	}
+
+	client := PterodactylClient{
+		Request: PteroRequestHeaders{bearer_auth_token, base_url},
+	}
+
+	success, err := client.ChangePowerState("102248be", "restart")
+	if err != nil {
+		log.Fatalf("Error trying to change power state")
+	}
+
+	logger.Info("Change State succeeded", "SuccessCode", success)
+	logger.Info("TestChangePowerState() complete")
 }
