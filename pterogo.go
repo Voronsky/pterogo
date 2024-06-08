@@ -1,6 +1,7 @@
 package pterogo
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,8 +24,9 @@ type PterodactylClient struct {
 
 // PteroResp will hold the JSON decoded body sent from the Pterodactyl Server.
 type PteroResp struct {
-	Object string      `json:"object"`
-	Data   []PteroData `json:"data"`
+	StatusCode int
+	Object     string      `json:"object,omitempty"`
+	Data       []PteroData `json:"data,omitempty"`
 }
 
 // PteroData holds all the JSON decoded the nested Pterodactyl 'object' and data found in the Response
@@ -48,12 +50,12 @@ type Server struct {
 
 // Builds the custom headers needed for Pterodactyl API routes
 // Executes the Request based on the method and route passed
-func (prh PteroRequestHeaders) PteroRequest(method string, route string) ([]byte, error) {
+func (prh PteroRequestHeaders) PteroGetRequest(route string) ([]byte, error) {
 	client := &http.Client{}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	//Build Method Request
-	req, err := http.NewRequest(method, route, nil)
+	//Build Get Request
+	req, err := http.NewRequest("GET", route, nil)
 	if err != nil {
 		slog.Error("Failed to make a new request", "Error", err)
 		return nil, err
@@ -64,7 +66,66 @@ func (prh PteroRequestHeaders) PteroRequest(method string, route string) ([]byte
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+prh.auth_token)
 
-	//Issue GET request
+	//Issue Method request
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Error("An error occurred trying to issue the request", "Error", err)
+		return nil, err
+	}
+
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		// Create custom error for this
+		err := fmt.Errorf("received redirection error=%d", resp.StatusCode)
+		logger.Error("Redirect error code was returned", "StatusCode", resp.StatusCode)
+		return nil, err
+	}
+
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		// Create custom error for this
+		err := fmt.Errorf("received client error=%d", resp.StatusCode)
+		logger.Error("Client error code was returned", "StatusCode", resp.StatusCode)
+		return nil, err
+	}
+
+	if resp.StatusCode >= 500 {
+		err := fmt.Errorf("received internal server error=%d, please report this trace to the github", resp.StatusCode)
+		logger.Error("Internal server code was returned", "StatusCode", resp.StatusCode)
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Failed to read body", "Error", err)
+		return nil, err
+	}
+
+	logger.Info("Request successful", "RespStatusCode", resp.StatusCode)
+	return body, nil
+}
+
+// Builds the custom headers needed for Pterodactyl API routes
+// Executes the POST Request to the route passed
+func (prh PteroRequestHeaders) PteroPostRequest(route string, jsonBody []byte) (*PteroResp, error) {
+	client := &http.Client{}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	pResp := &PteroResp{}
+
+	//Build Post Request
+	bodyReader := bytes.NewReader(jsonBody)
+	req, err := http.NewRequest("POST", route, bodyReader)
+	if err != nil {
+		slog.Error("Failed to make a new request", "Error", err)
+		return nil, err
+	}
+
+	//Add Pterodactyl Headers
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+prh.auth_token)
+
+	//Issue Method request
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Error("An error occurred trying to issue the request", "Error", err)
@@ -100,7 +161,9 @@ func (prh PteroRequestHeaders) PteroRequest(method string, route string) ([]byte
 		logger.Error("Failed to read body", "Error", err)
 		return nil, err
 	}
-	return body, nil
+	pResp.StatusCode = resp.StatusCode
+	json.Unmarshal(body, &pResp)
+	return pResp, nil
 }
 
 // Grabs the list of servers from Pterodactyl
@@ -116,14 +179,15 @@ func (pc PterodactylClient) ListServers() (map[string]Server, error) {
 	route := fmt.Sprintf("%s/api/client", pc.Request.url)
 
 	// Decode the JSON body into the appropriate interface
-	body, err := pc.Request.PteroRequest("GET", route)
+	body, err := pc.Request.PteroGetRequest(route)
 	if err != nil {
 		logger.Error("Error received making request to Pterodactyl", "Error", err)
 		return nil, err
 	}
 
 	json.Unmarshal(body, &r)
-	slog.Info("Decoded JSON body", "pteroResp=", r)
+
+	logger.Info("Decoded JSON body", "pteroResp", r)
 	for i := 0; i < len(r.Data); i++ {
 		attrs := r.Data[i]
 		servers[attrs.Attributes.Identifier] = Server{attrs.Attributes.Name, attrs.Attributes.Description}
@@ -142,17 +206,35 @@ func (pc PterodactylClient) ServerDetails(identifier string) (*Server, error) {
 	//Build GET route and make Request
 	route := fmt.Sprintf("%s/api/client/servers/%s", pc.Request.url, identifier)
 
-	body, err := pc.Request.PteroRequest("GET", route)
+	body, err := pc.Request.PteroGetRequest(route)
 	if err != nil {
 		logger.Error("Error received making request to Pterodactyl", "Error", err)
 		return nil, err
 	}
 
 	json.Unmarshal(body, &data)
-	slog.Info("Decoded JSON body", "PteroResp", data)
+	logger.Info("Decoded JSON body", "PteroResp", data)
 
 	server.Name = data.Attributes.Name
 	server.Description = data.Attributes.Description
 
 	return server, nil
+}
+
+func (pc PterodactylClient) ChangePowerState(identifier string, state string) (int, error) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	//Build POST route and make Request
+	route := fmt.Sprintf("%s/api/client/servers/%s/power", pc.Request.url, identifier)
+
+	jsonBody := []byte(fmt.Sprintf(`{ "signal": "%s"}`, state))
+	resp, err := pc.Request.PteroPostRequest(route, jsonBody)
+	if err != nil {
+		logger.Error("Error received making POST request to Pterodactyl", "Error", err)
+		return -1, err
+	}
+
+	logger.Info("Successful post", "StatusCode", resp.StatusCode, "Body", resp.Data)
+	return 0, nil
+
 }
