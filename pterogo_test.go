@@ -12,16 +12,20 @@ import (
 func TestListServers(t *testing.T) {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	//s, err := listServers()
-	var client PterodactylClient
+	// Parse the env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf(`No env file found`)
 	}
 	bearer_auth_token := os.Getenv("PTERO_API_KEY")
 	base_url := os.Getenv("BASE_URL")
-	s, err := client.ListServers(bearer_auth_token, base_url)
-	//s, err := listServers(bearer_auth_token, base_url)
+
+	// Test method
+	client := PterodactylClient{
+		Request: PteroRequestHeaders{bearer_auth_token, base_url},
+	}
+
+	s, err := client.ListServers()
 	if err != nil {
 		log.Fatalf(`ListServers() = %q, %v, want nil, error`, s, err)
 	}
@@ -31,14 +35,21 @@ func TestListServers(t *testing.T) {
 func TestListServersBadUrl_neg(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	logger.Info("ListServersBadUrl negative test")
+
+	// Parse env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf(`No env file found`)
 	}
 
-	var client PterodactylClient
 	bearer_auth_token := os.Getenv("PTERO_API_KEY")
-	s, err := client.ListServers(bearer_auth_token, "https://example.com")
+
+	// Test the bad route
+	client := PterodactylClient{
+		Request: PteroRequestHeaders{bearer_auth_token, "https://example.com"},
+	}
+
+	s, err := client.ListServers()
 	if s != nil {
 		log.Fatalf("Function returned a map, when it should have failed.")
 	}
@@ -51,16 +62,20 @@ func TestListServersBadUrl_neg(t *testing.T) {
 
 func TestListServersBadAuth_neg(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	err := godotenv.Load()
 	logger.Info("ListServersBadAuth negative test")
+	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf(`No env file found`)
 	}
 
+	// Test with bad auth
 	bearer_auth_token := "example"
 	base_url := os.Getenv("BASE_URL")
-	var client PterodactylClient
-	s, err := client.ListServers(bearer_auth_token, base_url)
+
+	client := PterodactylClient{
+		Request: PteroRequestHeaders{bearer_auth_token, base_url},
+	}
+	s, err := client.ListServers()
 	if s != nil {
 		log.Fatalf("Function returned a map, when it should have failed.")
 	}
@@ -71,16 +86,21 @@ func TestListServersBadAuth_neg(t *testing.T) {
 
 func TestServerDetails(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	err := godotenv.Load()
-	auth_token := os.Getenv("PTERO_API_KEY")
-	base_url := os.Getenv("BASE_URL")
 	logger.Info("TestServerDetails() begin")
+
+	// Parse env file
+	err := godotenv.Load()
+	bearer_auth_token := os.Getenv("PTERO_API_KEY")
+	base_url := os.Getenv("BASE_URL")
 	if err != nil {
 		log.Fatalf(`No env file found`)
 	}
 
-	var client PterodactylClient
-	s, err := client.ServerDetails("102248be", auth_token, base_url)
+	client := PterodactylClient{
+		Request: PteroRequestHeaders{bearer_auth_token, base_url},
+	}
+
+	s, err := client.ServerDetails("102248be")
 	if err != nil {
 		log.Fatalf(`Error retrieving server details`)
 	}
