@@ -10,6 +10,13 @@ import (
 	"os"
 )
 
+var (
+	opts = &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, opts))
+)
+
 // PteroRequestHeaders keeps track of the auth token and base url for all requests
 // Its methods allow to make a request using the auth token and base url
 type PteroRequestHeaders struct {
@@ -53,12 +60,11 @@ type Server struct {
 // Executes the Request based on the method and route passed
 func (prh PteroRequestHeaders) PteroGetRequest(route string) ([]byte, error) {
 	client := &http.Client{}
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	//Build Get Request
 	req, err := http.NewRequest("GET", route, nil)
 	if err != nil {
-		slog.Error("Failed to make a new request", "Error", err)
+		slog.Error("Failed to make a new GET request", "Error", err)
 		return nil, err
 	}
 
@@ -70,7 +76,7 @@ func (prh PteroRequestHeaders) PteroGetRequest(route string) ([]byte, error) {
 	//Issue Method request
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error("An error occurred trying to issue the request", "Error", err)
+		logger.Error("An error occurred trying to issue the GET request", "Error", err)
 		return nil, err
 	}
 
@@ -102,7 +108,7 @@ func (prh PteroRequestHeaders) PteroGetRequest(route string) ([]byte, error) {
 		return nil, err
 	}
 
-	logger.Info("Request successful", "RespStatusCode", resp.StatusCode)
+	logger.Debug("Request successful", "RespStatusCode", resp.StatusCode)
 	return body, nil
 }
 
@@ -110,14 +116,13 @@ func (prh PteroRequestHeaders) PteroGetRequest(route string) ([]byte, error) {
 // Executes the POST Request to the route passed
 func (prh PteroRequestHeaders) PteroPostRequest(route string, jsonBody []byte) (*PteroResp, error) {
 	client := &http.Client{}
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	pResp := &PteroResp{}
 
 	//Build Post Request
 	bodyReader := bytes.NewReader(jsonBody)
 	req, err := http.NewRequest("POST", route, bodyReader)
 	if err != nil {
-		slog.Error("Failed to make a new request", "Error", err)
+		slog.Error("Failed to make a new POST request", "Error", err)
 		return nil, err
 	}
 
@@ -129,7 +134,7 @@ func (prh PteroRequestHeaders) PteroPostRequest(route string, jsonBody []byte) (
 	//Issue Method request
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error("An error occurred trying to issue the request", "Error", err)
+		logger.Error("An error occurred trying to issue the POST request", "Error", err)
 		return nil, err
 	}
 
@@ -153,7 +158,7 @@ func (prh PteroRequestHeaders) PteroPostRequest(route string, jsonBody []byte) (
 		return nil, err
 	}
 
-	logger.Info("Request successful", "Resp", resp.StatusCode)
+	logger.Debug("Request successful", "Resp", resp.StatusCode)
 
 	defer resp.Body.Close()
 
@@ -175,7 +180,6 @@ func (pc PterodactylClient) ListServers() (map[string]Server, error) {
 	r := PteroResp{}
 	servers := map[string]Server{}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//Build GET Request
 	route := fmt.Sprintf("%s/api/client", pc.Request.url)
 
@@ -188,11 +192,11 @@ func (pc PterodactylClient) ListServers() (map[string]Server, error) {
 
 	json.Unmarshal(body, &r)
 
-	logger.Info("Decoded JSON body", "pteroResp", r)
+	logger.Debug("Decoded JSON body", "pteroResp", r)
 	for i := 0; i < len(r.Data); i++ {
 		attrs := r.Data[i]
 		servers[attrs.Attributes.Identifier] = Server{attrs.Attributes.Name, attrs.Attributes.Description}
-		logger.Info("Server identifer", "Server", attrs.Attributes.Identifier)
+		logger.Debug("Server identifer", "Server", attrs.Attributes.Identifier)
 	}
 
 	return servers, nil
@@ -200,7 +204,6 @@ func (pc PterodactylClient) ListServers() (map[string]Server, error) {
 
 // Return server details for the specific identifier
 func (pc PterodactylClient) ServerDetails(identifier string) (*Server, error) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	server := &Server{}
 	data := PteroData{}
 
@@ -214,7 +217,7 @@ func (pc PterodactylClient) ServerDetails(identifier string) (*Server, error) {
 	}
 
 	json.Unmarshal(body, &data)
-	logger.Info("Decoded JSON body", "PteroResp", data)
+	logger.Debug("Decoded JSON body", "PteroResp", data)
 
 	server.Name = data.Attributes.Name
 	server.Description = data.Attributes.Description
@@ -224,7 +227,6 @@ func (pc PterodactylClient) ServerDetails(identifier string) (*Server, error) {
 
 // Retrieves the a string of power state based on the server or "identifier"
 func (pc PterodactylClient) GetPowerState(identifier string) (string, error) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	pData := &PteroData{}
 
 	//Build GET route and make the request
@@ -237,7 +239,7 @@ func (pc PterodactylClient) GetPowerState(identifier string) (string, error) {
 	}
 
 	json.Unmarshal(resp, &pData)
-	logger.Info("Decoded JSON body", "PteroResp", pData)
+	logger.Debug("Decoded JSON body", "PteroResp", pData)
 
 	return pData.Attributes.CurrentState, nil
 
@@ -245,7 +247,6 @@ func (pc PterodactylClient) GetPowerState(identifier string) (string, error) {
 
 // Returns 0 for success or -1 for failure. Pterodactyl does not provide additional information besides a status code for success
 func (pc PterodactylClient) ChangePowerState(identifier string, state string) (int, error) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	//Build POST route and make Request
 	route := fmt.Sprintf("%s/api/client/servers/%s/power", pc.Request.url, identifier)
@@ -257,7 +258,7 @@ func (pc PterodactylClient) ChangePowerState(identifier string, state string) (i
 		return -1, err
 	}
 
-	logger.Info("Successful post", "StatusCode", resp.StatusCode, "Body", resp.Data)
+	logger.Debug("Successful post", "StatusCode", resp.StatusCode, "Body", resp.Data)
 	return 0, nil
 
 }
