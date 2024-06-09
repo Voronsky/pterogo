@@ -71,7 +71,7 @@ func (prh PteroRequestHeaders) PteroGetRequest(route string) ([]byte, error) {
 	//Add Pterodactyl Headers
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+prh.auth_token)
+	req.Header.Add("Authorization", "Bearer "+prh.Auth_token)
 
 	//Issue Method request
 	resp, err := client.Do(req)
@@ -129,7 +129,7 @@ func (prh PteroRequestHeaders) PteroPostRequest(route string, jsonBody []byte) (
 	//Add Pterodactyl Headers
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+prh.auth_token)
+	req.Header.Add("Authorization", "Bearer "+prh.Auth_token)
 
 	//Issue Method request
 	resp, err := client.Do(req)
@@ -181,7 +181,7 @@ func (pc PterodactylClient) ListServers() (map[string]Server, error) {
 	servers := map[string]Server{}
 
 	//Build GET Request
-	route := fmt.Sprintf("%s/api/client", pc.Request.url)
+	route := fmt.Sprintf("%s/api/client", pc.Request.Url)
 
 	// Decode the JSON body into the appropriate interface
 	body, err := pc.Request.PteroGetRequest(route)
@@ -208,7 +208,7 @@ func (pc PterodactylClient) ServerDetails(identifier string) (*Server, error) {
 	data := PteroData{}
 
 	//Build GET route and make Request
-	route := fmt.Sprintf("%s/api/client/servers/%s", pc.Request.url, identifier)
+	route := fmt.Sprintf("%s/api/client/servers/%s", pc.Request.Url, identifier)
 
 	body, err := pc.Request.PteroGetRequest(route)
 	if err != nil {
@@ -230,7 +230,7 @@ func (pc PterodactylClient) GetPowerState(identifier string) (string, error) {
 	pData := &PteroData{}
 
 	//Build GET route and make the request
-	route := fmt.Sprintf("%s/api/client/servers/%s/resources", pc.Request.url, identifier)
+	route := fmt.Sprintf("%s/api/client/servers/%s/resources", pc.Request.Url, identifier)
 
 	resp, err := pc.Request.PteroGetRequest(route)
 	if err != nil {
@@ -249,7 +249,7 @@ func (pc PterodactylClient) GetPowerState(identifier string) (string, error) {
 func (pc PterodactylClient) ChangePowerState(identifier string, state string) (int, error) {
 
 	//Build POST route and make Request
-	route := fmt.Sprintf("%s/api/client/servers/%s/power", pc.Request.url, identifier)
+	route := fmt.Sprintf("%s/api/client/servers/%s/power", pc.Request.Url, identifier)
 
 	jsonBody := []byte(fmt.Sprintf(`{ "signal": "%s"}`, state))
 	resp, err := pc.Request.PteroPostRequest(route, jsonBody)
