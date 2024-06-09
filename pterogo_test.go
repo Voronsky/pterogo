@@ -11,7 +11,6 @@ import (
 
 func TestListServers(t *testing.T) {
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	// Parse the env file
 	err := godotenv.Load()
 	if err != nil {
@@ -33,8 +32,7 @@ func TestListServers(t *testing.T) {
 }
 
 func TestListServersBadUrl_neg(t *testing.T) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	logger.Info("ListServersBadUrl negative test")
+	logger.Info("=== ListServersBadUrl negative test ===")
 
 	// Parse env file
 	err := godotenv.Load()
@@ -56,13 +54,12 @@ func TestListServersBadUrl_neg(t *testing.T) {
 	if err == nil {
 		logger.Info("Received an error with server variable set to nil.")
 	}
-	logger.Info("ListServersBadUrl negative test complete")
+	logger.Info("=== ListServersBadUrl negative test complete ===")
 
 }
 
 func TestListServersBadAuth_neg(t *testing.T) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	logger.Info("ListServersBadAuth negative test")
+	logger.Info("=== ListServersBadAuth negative test ===")
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf(`No env file found`)
@@ -80,13 +77,12 @@ func TestListServersBadAuth_neg(t *testing.T) {
 		log.Fatalf("Function returned a map, when it should have failed.")
 	}
 	logger.Info("Received an error with server variable set to nil.", "Error", err)
-	logger.Info("ListServersBadAuth negative test complete")
+	logger.Info("=== ListServersBadAuth negative test complete ===")
 
 }
 
 func TestServerDetails(t *testing.T) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	logger.Info("TestServerDetails() begin")
+	logger.Info("=== TestServerDetails() begin === ")
 
 	// Parse env file
 	err := godotenv.Load()
@@ -112,13 +108,12 @@ func TestServerDetails(t *testing.T) {
 	// Get detail about the server passed
 
 	logger.Info("Server info received", "Server Info", s)
-	logger.Info("TestServerDetails() complete")
+	logger.Info(" === TestServerDetails() complete === ")
 
 }
 
 func TestChangePowerState(t *testing.T) {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	logger.Info("TestChangePowerState() begin")
+	logger.Info(" === TestChangePowerState() begin ===")
 
 	// Parse env file
 	err := godotenv.Load()
@@ -144,7 +139,7 @@ func TestChangePowerState(t *testing.T) {
 	}
 
 	logger.Info("Change State succeeded", "SuccessCode", success)
-	logger.Info("TestChangePowerState() complete")
+	logger.Info("=== TestChangePowerState() complete ===")
 }
 
 func TestGetPowerState(t *testing.T) {
