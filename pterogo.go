@@ -20,8 +20,8 @@ var (
 // PteroRequestHeaders keeps track of the auth token and base url for all requests
 // Its methods allow to make a request using the auth token and base url
 type PteroRequestHeaders struct {
-	auth_token string
-	url        string
+	Auth_token string
+	Url        string
 }
 
 // A PterodactylClient implements methods for all client API routes
